@@ -38,7 +38,7 @@ module Audited
     belongs_to :user,       polymorphic: true
     belongs_to :associated, polymorphic: true
 
-    before_create :set_version_number, :set_audit_user, :set_request_uuid, :set_remote_address
+    before_create :set_version_number, :set_audit_user, :set_request_uuid, :set_remote_address, :set_app_instance_id, :set_entityIds
 
     cattr_accessor :audited_class_names
     self.audited_class_names = Set.new
@@ -55,6 +55,11 @@ module Audited
     scope :from_version,  ->(version){ where('version >= ?', version) }
     scope :to_version,    ->(version){ where('version <= ?', version) }
     scope :auditable_finder, ->(auditable_id, auditable_type){ where(auditable_id: auditable_id, auditable_type: auditable_type)}
+
+    def self.table_name
+      'public.audits'
+    end
+
     # Return all audits older than the current one.
     def ancestors
       self.class.ascending.auditable_finder(auditable_id, auditable_type).to_version(version)
@@ -189,6 +194,14 @@ module Audited
 
     def set_remote_address
       self.remote_address ||= ::Audited.store[:current_remote_address]
+    end
+
+    def set_app_instance_id
+      self.app_instance_id = Thread.current[:appinstance].id
+    end
+
+    def set_entityIds
+      self.entityIds = Thread.current[:appinstance].zuora_entity_ids
     end
   end
 end
